@@ -1,398 +1,239 @@
-# Pyq 主题 — 详细功能总结与技术文档
+# 🎉 开心朋友圈 (KXpyq) — Typecho 主题介绍
 
-> **主题名称：** Pyq  
-> **作者：** 清酒  
-> **版本：** 1.0.0 (2026-06-28)  
-> **适配程序：** Typecho 1.3.0  
-> **运行环境：** PHP 8.2 + MySQL 5.7  
-> **站点地址：** https://p.qu.pw/  
-> **主题目录：** `/www/wwwroot/p.qu.pw/usr/themes/pyq/`
+> **版本**：v1.0.0  
+> **作者**：[清酒](https://qu.pw)
+> **博客**：[KX.MS](https://kx.ms/archives/pyq.html)  
+> **类型**：朋友圈风格单用户博客主题  
+> **适配**：Typecho 1.2+ / PHP 7.4+
 
 ---
 
-## 一、主题概述
+## 📱 简介 [KX.MS](https://kx.ms/archives/pyq.html)
 
-Pyq 是一款仿朋友圈风格的 Typecho 主题，以说说（短文）为核心，支持图文、音乐、视频、链接等多种内容形式。移动端优先设计，支持深色模式、PJAX 无刷新导航、LRC 歌词滚动等高级功能。
+**开心朋友圈**（KXpyq）是一款高仿真微信朋友圈风格的 Typecho 主题。设计初衷是为个人博主提供一个亲切、轻量、移动优先的"碎碎念"发布平台——像发朋友圈一样写博客。
 
-参考主题：wutoutu（同目录下），在此基础上进行了大量功能增强和 UI 优化。
+它不是传统博客，而是你的**数字朋友圈**：说说、图片、音乐、视频、位置签到、互动评论……这些在微信里习以为常的表达方式，现在你可以在自己的网站上拥有了。
 
 ---
 
-## 二、文件结构
+## 🏗 整体架构
 
 ```
-pyq/
-├── index.php              # 首页模板（说说列表 + 分页 + AJAX加载更多）
-├── post.php               # 文章详情页（单篇说说 + 评论区）
-├── page.php               # 通用页面模板
-├── page-about.php         # 关于页面（社交账号弹窗）
-├── page-links.php         # 友链页面
-├── page-archive.php       # 归档页面（按月分组）
-├── header.php             # 公共头部（导航栏 + 封面 + 公告 + 音乐播放器）
-├── footer.php             # 公共底部（弹窗公告 + 返回顶部 + JS加载）
-├── comments.php           # 评论模板
-├── functions.php          # 主题函数（自定义字段 + 工具函数）
-├── setting.php            # 后台设置页（Tab式界面）
-├── ajax.php               # AJAX接口（加载更多 + 评论提交 + 点赞）
-├── music-proxy.php        # 音乐代理（本地Meting库 + 流式传输）
-├── img-proxy.php          # 图片代理（防盗链处理）
+kxpyq/
+├── index.php               # 首页——朋友圈信息流
+├── post.php                # 文章页——单条说说详情
+├── header.php              # 公共头部：SEO/导航/封面/公告
+├── footer.php              # 公共底部：音乐浮控/返回顶部/JS加载
+├── functions.php           # 核心逻辑：卡片渲染/音乐代理/代码高亮等
+├── setting.php             # 后台设置界面（5个Tab页）
+├── ajax.php                # AJAX接口：加载更多/点赞/评论/搜索
+├── page-about.php          # 关于页面（数据统计+社交链接）
+├── page-archive.php        # 归档时光轴（年月分组+统计）
+├── page-links.php          # 友情链接页（依赖Links插件）
+├── comments.php            # 评论区模板
+├── img-proxy.php           # 图片缩放代理（缓存+EXIF修正）
+├── music-proxy.php         # 网易云音乐代理
+├── lib/Meting.php          # 本地Meting音乐库
 ├── assets/
 │   ├── css/
-│   │   ├── style.css      # 前台主样式（1193行）
-│   │   ├── houtai.css     # 后台设置页样式（354行）
-│   │   └── admin-fix.css  # 后台全局修复CSS（130行）
+│   │   ├── style.css          # 源CSS（开发版）
+│   │   ├── style.min.css      # 压缩CSS（生产版，~33KB）
+│   │   ├── houtai.css         # 后台设置页样式
+│   │   └── admin-fix.css      # 后台预览修正
 │   ├── js/
-│   │   ├── app.js         # 前台主逻辑（1250行）
-│   │   └── houtai.js      # 后台设置页逻辑（54行）
-│   └── img/               # 主题图片资源
-├── lib/
-│   └── Meting.php         # Metowolf Meting 音乐API库
-└── static/
-    └── prism/             # Prism.js 代码高亮（22个文件，16种语言）
+│   │   ├── app.v2.js          # 源JS（开发版，~61KB）
+│   │   ├── app.min.js         # 压缩JS（生产版，~60KB）
+│   │   └── houtai.js          # 后台设置页脚本
+│   ├── lib/
+│   │   ├── prism/             # Prism.js代码高亮（19种语言，按需加载）
+│   │   └── fancybox/          # Fancybox图片灯箱（懒加载）
+│   └── cache/                 # 图片代理缓存目录
 ```
 
-**总代码量：** 5266 行
+**核心设计理念**：统一渲染、移动优先、性能极致、渐进增强。
+
+所有卡片通过 `pyq_format_post_data()` + `pyq_render_card()` 两个函数统一输出，PHP 服务端渲染与 AJAX 客户端渲染共享同一套代码，杜绝不一致。
 
 ---
 
-## 三、功能特性
+## ✨ 全部功能一览
 
-### 3.1 内容类型
+### 🎨 朋友圈风格
 
-| 类型 | 自定义字段 | 说明 |
-|------|-----------|------|
-| 图文 | `images`（多行文本） | 多图URL，每行一张，支持懒加载 |
-| 视频 | `video_url`（单行文本） | 视频链接，支持 mp4/embed |
-| 音乐 | `music_url` + `music_name` + `music_artist` + `music_cover` + `music_lrc` | 音乐卡片，支持封面+歌词 |
-| 链接 | `link_url` + `link_title` + `link_desc` + `link_thumb` | 外部链接卡片预览 |
-| 位置 | `location`（单行文本） | 显示位置信息 |
-| 置顶 | `is_top`（单选：是/否） | 置顶文章 |
+- 封面大图 + 头像 + 昵称 + 个性签名
+- 卡片式信息流，圆角阴影，体验接近微信
+- 移动端优先，完美适配手机/平板/桌面
+- 置顶说说支持
 
-### 3.2 音乐系统
+### 📝 说说内容类型
 
-#### 顶部播放器
-- 导航栏集成迷你播放器（播放/暂停 + 歌名滚动）
-- 支持两种音源：
-  - `bgm_url`：直接 MP3 链接（优先）
-  - `netease_id`：网易云歌曲ID，通过本地 Meting 库代理获取
-- 音乐代理 `music-proxy.php`：流式传输 + Range 分块请求支持
-
-#### 音乐卡片（说说内嵌）
-- 80px 高度卡片，封面背景 + 歌曲名 + 歌手 + 播放按钮
-- 底部进度条（3px，hover 6px），支持拖动 seek
-- LRC 歌词滚动：
-  - 支持标准 LRC 格式（`[00:12.34]歌词`）
-  - 支持网易云 JSON 格式（`{"t":0,"c":[{"tx":"歌词"}]}`）
-  - 歌词区在卡片下方展开，背景使用封面模糊图
-  - 当前行高亮（白色 15px + 发光阴影）
-  - `requestAnimationFrame` 同步滚动，使用 `scrollTo` 避免页面抖动
-  - 展开/收起按钮，可手动控制
-
-### 3.3 评论系统
-
-- AJAX 无刷新提交评论
-- 必填昵称 + 邮箱（邮箱格式校验）
-- 评论 @回复 功能（点击回复按钮自动填充）
-- 评论邮件通知：
-  - 直接调用 CommentNotifier 插件的 `refinishComment` 方法
-  - 绕过异步模式（`yibu=1`），确保邮件即时发送
-  - 修复 `ownerId` 为 0 的问题，从 `typecho_contents` 查询文章作者
-- 评论树形渲染（`pyq_render_comments_tree`）
-
-### 3.4 交互功能
-
-- **点赞：** AJAX 点赞/取消，实时更新按钮状态和点赞列表
-- **分享：** 8 按钮弹窗（2×4 网格）— 微信/微博/QQ/复制链接/带标题复制/更多
-- **返回顶部：** 滚动 300px 后显示，平滑滚动
-- **图片灯箱：** FancyBox 集成，点击图片放大查看
-- **懒加载：** IntersectionObserver 图片懒加载
-- **加载更多：** 滚动到底部自动加载下一页（AJAX）
-
-### 3.5 PJAX 无刷新导航
-
-- 全站 PJAX 实现，音乐播放不中断
-- `XMLHttpRequest` + `DOMParser` 解析新页面
-- `history.pushState` / `popstate` 浏览器前进后退支持
-- 换页后自动重新初始化：FancyBox、Prism.js、懒加载、搜索、加载更多
-- 内容区域目标：`#pyq-feed`
-
-### 3.6 深色模式
-
-- 跟随系统 `prefers-color-scheme` 自动切换
-- CSS 变量体系（`--bg`, `--card`, `--text`, `--text2`, `--text3`, `--border` 等）
-- 所有组件完整适配深色/浅色
-
-### 3.7 代码高亮
-
-- Prism.js 集成（16 种语言）
-- 暗色主题 + 行号 + 一键复制按钮
-- `pyq_parse_code()` 函数处理代码块
-
----
-
-## 四、后台设置
-
-### 4.1 设置界面
-
-Tab 式布局（5 个标签页）：
-
-| 标签 | 内容 |
+| 类型 | 说明 |
 |------|------|
-| 基础设置 | 头像URL、封面图URL、封面高度、用户名、个性签名、ICP备案、说说分类slug、静态资源URL |
-| 音乐设置 | 背景音乐URL、网易云歌曲ID |
-| 社交菜单 | GitHub/微博/微信/QQ 链接 + 菜单项配置 |
-| 功能设置 | 公告文字、公告背景色（色盘选择）、Gravatar源选择、弹窗公告 |
-| 高级设置 | 自定义CSS/JS 代码注入 |
+| 纯文字 | 超过250字自动折叠「展开全文」 |
+| 图片 | 1/2/3/4/9宫格自适应布局，单图原比例不裁切 |
+| 视频 | 支持直链视频，内嵌播放器 |
+| 音乐卡片 | 网易云/本地音频，专辑封面 + 播放控制 + 进度条 + LRC歌词滚动 |
+| 链接卡片 | 缩略图 + 标题 + 描述，外链展示 |
+| 位置签到 | 链接到高德地图搜索 |
+| 话题标签 | `#tag#` 格式，点击搜同类 |
 
-### 4.2 设置备份
+### 🎵 音乐系统
 
-- 一键备份当前所有设置
-- 列出历史备份，支持一键恢复/删除
-- 备份存储在 `typecho_options` 表中
+- **全局BGM**：后台配置背景音乐，PJAX 换页不中断
+- **音乐卡片**：每条说说可内嵌音乐播放器，支持：
+  - 网易云自动获取歌曲名/歌手/封面（Metting API）
+  - 播放/暂停 + 进度条拖拽 + 音量
+  - LRC 歌词展开滚动（支持标准 LRC 和网易云 JSON 两种格式）
+- **浮动音乐控制**：右下角音符按钮 + 播放/暂停 + 定位子按钮
+- **网易云代理**：music-proxy.php 本地代理，解决外链失效
 
-### 4.3 自定义字段
+### 💻 代码高亮
 
-文章编辑页自定义字段支持：
-- textarea 高度优化（36px 起，可拖拽调整）
-- 文字描述改为 placeholder（`$e->input->setAttribute`）
-- Radio 按钮置顶选择（is_top）
-- 所有字段支持 JS 拖拽调整宽度（text input）
+- Prism.js 集成，支持 **19 种语言**：  
+  Bash, C, C++, CSS, Go, HTML, Java, JavaScript, JSON, Kotlin, Markup, PHP, Python, Ruby, Rust, SQL, Swift, TypeScript, 纯文本
+- 多行代码块 `\`\`\`language` + 行内代码 `` `code` ``
+- 复制按钮 + 行号显示
+- **按需加载**：首页不加载，文章页按内容中实际语言动态引入
 
----
+### 🖼 图片系统
 
-## 五、页面模板
+- **图片代理**：`img-proxy.php` 自动缩放 + 缓存，节省带宽
+- **EXIF 方向修正**：竖拍照片自动旋转
+- **Fancybox 灯箱**：图片点击放大浏览，支持手势滑动（`fancybox.umd.js` ~165KB）
+- **懒加载**：Intersection Observer + blur-in 动画
+- **失败重试**：图片加载失败自动重试 3 次
 
-### 5.1 关于页面 (`page-about.php`)
+### 💬 互动功能
 
-- 社交账号展示（QQ/微信/GitHub/微博）
-- 点击弹窗显示账号信息（QQ 弹窗、微信弹窗）
-- 复制账号到剪贴板
-- 弹窗函数在 `app.js` 中定义（PJAX 兼容）
+- **点赞**：基于 Cookie + IP 去重，支持访客名显示，点赞列表一目了然
+- **表情反应**：长按赞按钮弹出 👍❤️😂😮😢 五种 emoji 反应
+- **评论系统**：
+  - 嵌套回复，支持 @ 提及
+  - 超过 5 条自动折叠，点击「展开全部 N 条」
+  - IP 归属地显示（ip-api.com）
+  - 博主标记（橙色「博主」badge）
+  - 评论邮件通知（依赖 CommentNotifier 插件）
+  - 首次评论标记「首评」
+- **分享**：二维码分享 + 浏览器原生分享 API + 海报分享（Canvas 生成卡片图）
+- **搜索**：全屏弹窗搜索，实时结果
+- **PJAX 无刷新换页**：切页时音乐不中断
 
-### 5.2 友链页面 (`page-links.php`)
+### 🎛 外观定制
 
-- 配合links插件使用
-- 友链列表展示
-- 卡片式布局
+- **深色/浅色模式**：
+  - 手动一键切换
+  - 定时自动切换（19:00 ~ 07:00）
+  - 跟随系统偏好
+  - 状态持久化到 localStorage
+- **字体大小调节**：左下角 Aa 按钮，14px / 16px / 18px 三档
+- **主题色**：后台自定义 HEX 色值
+- **最大宽度**：后台调节（默认 680px，适合朋友圈风格）
+- **卡片圆角**：后台调节（默认 12px）
+- **自定义 CSS/JS**：后台直接注入
 
-### 5.3 归档页面 (`page-archive.php`)
+### 📡 SEO & 社交分享
 
-- 按年月分组的文章列表
-- 链接格式：`/archives/slug.html`
+- Open Graph 标签（og:title/description/image/url/type/site_name）
+- Twitter Card 标签
+- 自动 meta description
+- RSS / Atom Feed 链接
+- 文章底部版权声明（支持 `{title} {url} {author} {date}` 变量）
 
----
+### 📱 PWA 支持
 
-## 六、技术实现细节
+- `manifest.json`：可安装到手机桌面，带图标和主题色
+- Service Worker：离线缓存，弱网可用
+- 深色/浅色 theme-color 自适应
 
-### 6.1 IIFE 架构
+### 🚀 性能优化
 
-`app.js` 使用 IIFE（立即执行函数表达式）封装，所有功能通过 `pyq.xxx` 暴露到全局：
+| 项目 | 优化前 | 优化后 | 方式 |
+|------|--------|--------|------|
+| CSS | 44KB 同步 | 33KB minified | 压缩 + 版本号 |
+| JS | 61KB 同步 | 60KB + defer | 压缩 + 异步加载 |
+| Prism | 108KB 全量 | 0~20KB 按需 | 按页面检测语言加载 |
+| Fancybox | 165KB 全量 | 0KB（首次点击加载） | 懒加载 |
+| **首屏总计** | **~378KB** | **~93KB** | **节省 75%** |
 
-```javascript
-;(function(){
-  // 内部变量
-  var pyq = window.pyq = {};
-  // 所有功能定义...
-  pyq.playCardMusic = function(btn){ ... };
-  pyq.parseLrc = function(text){ ... };
-  // ...
-})();
-```
+- DNS 预解析 + Preconnect
+- 非关键 CSS 异步预加载
+- 图片懒加载 + 代理缩放
+- 非首屏资源全部延迟
 
-**关键教训：** IIFE 闭合 `})();` 必须在所有 `pyq.xxx` 定义之后，否则后续代码引用 `pyq` 会 ReferenceError。
+### ⚙️ 后台设置
 
-### 6.2 音乐卡片 HTML 结构
+5 个 Tab 页，分类清晰：
 
-```html
-<div class="pyq-music-wrap" data-bg="封面URL">
-  <div class="pyq-music-card" data-src="音频URL" data-name="歌名" data-lrc="base64歌词">
-    <div class="pyq-music-card-bg" style="background-image:url(...)"></div>
-    <div class="pyq-music-card-left"><img src="封面"></div>
-    <div class="pyq-music-card-right">
-      <div class="pyq-music-card-info">
-        <div class="pyq-music-card-title">歌名</div>
-        <div class="pyq-music-card-artist">歌手</div>
-      </div>
-      <div class="pyq-music-card-play" onclick="pyq.playCardMusic(this)">▶</div>
-    </div>
-    <div class="pyq-music-progress" onmousedown="pyq.seekMusic(event,this)">
-      <div class="pyq-music-progress-bar"></div>
-      <div class="pyq-music-progress-dot"></div>
-    </div>
-  </div>
-  <div class="pyq-lrc-bar" onclick="pyq.toggleLrc(this)">歌词 ▼</div>
-  <div class="pyq-music-lrc">
-    <div class="pyq-lrc-bg" style="background-image:url(...)"></div>
-    <div class="pyq-lrc-overlay"></div>
-    <div class="pyq-lrc-lines"></div>
-  </div>
-</div>
-```
+| Tab | 内容 |
+|-----|------|
+| 基础设置 | 头像、封面、用户名、签名、ICP备案、说说分类、CDN |
+| 音乐设置 | 背景音乐 URL、网易云歌曲ID |
+| 社交菜单 | GitHub/微博/微信/QQ + 自定义菜单 |
+| 功能设置 | Gravatar源（5选）、公告、文章版权 |
+| 高级设置 | 主题色/最大宽度/卡片圆角 + 自定义CSS/JS + 注入代码 |
 
-### 6.3 LRC 歌词解析
+内置**设置备份/还原**功能，换主题不怕配置丢失。
 
-支持两种格式：
+### 📄 页面类型
 
-**标准 LRC：**
-```
-[00:12.34]歌词第一行
-[00:15.67]歌词第二行
-```
+| 页面 | 说明 |
+|------|------|
+| 首页 | 朋友圈信息流，无限滚动加载 |
+| 文章页 | 单条说说详情 + 相关推荐 |
+| 关于页面 | 数据统计（文章/评论/分类/天数）+ 社交链接（GitHub/微博/微信/QQ/Telegram）+ 评论区 |
+| 归档页面 | 时光轴：年份分组 + 月份分割 + 统计卡片 |
+| 友情链接 | Links 插件集成，按分组展示 |
+| 自定义页面 | 通用模板 |
 
-**网易云 JSON：**
-```json
-[{"t":0,"c":[{"tx":"作词: "},{"tx":"某某"}]},{"t":4000,"c":[{"tx":"歌词"}]}]
-```
+### 🔒 安全
 
-解析流程：
-1. 检测首字符是否为 `{` 或 `[`
-2. JSON 格式：解析数组，提取 `t`（毫秒）和 `c[].tx`（文本）
-3. LRC 格式：正则 `/[(\d{1,2}):(\d{2})(?:\.(\d{1,3}))?](.*)/g` 匹配
-4. 按时间排序
-
-### 6.4 歌词同步机制
-
-- `requestAnimationFrame` 高频循环（60fps）
-- 遍历已排序的歌词数组，找到当前时间对应的行
-- 高亮当前行（`.active` class）
-- `scrollTo` 滚动容器到当前行位置（不用 `scrollIntoView`，避免页面抖动）
-- 暂停时停止循环，恢复时重新启动
-
-### 6.5 进度条拖动
-
-- `mousedown/touchstart` 记录起始位置
-- `mousemove/touchmove` 实时计算百分比，更新 `audio.currentTime`
-- `mouseup/touchend` 清理事件监听
-- `getBoundingClientRect` 计算相对位置
-- 拖动中添加 `.dragging` class（白点常显 + 进度条变高）
-
-### 6.6 邮件通知修复
-
-三层问题修复：
-
-1. **插件未初始化：** `ajax.php` 需调用 `Plugin::init()` 初始化插件系统
-2. **ownerId 为 0：** `typecho_comments.ownerId` 全为 0，需从 `typecho_contents` 查 `authorId` 补全
-3. **异步模式失效：** CommentNotifier 的 `yibu=1` 模式在 AJAX handler 中不触发，直接调用 `Plugin::refinishComment($feedback)` 绕过
-
-### 6.7 后台 CSS 注入
-
-通过 `admin/header.php` 直接注入 `admin-fix.css`，修复：
-- select 下拉框样式（移动端 font-size 16px 防缩放）
-- textarea 可拖拽（覆盖 Typecho 的 `resize: none`）
-- 编辑器容器居中（覆盖 `.row { width: 100vw }`）
-- 移动端自定义字段、提交按钮全宽适配
+- 输入/输出全面 XSS 防护（`htmlspecialchars` + `json_encode`）
+- CSRF Token 验证
+- 图片代理 URL 白名单校验（仅允许 http/https）
 
 ---
 
-## 七、CSS 变量
+## 🔌 必须搭配的插件
 
-```css
-:root {
-  --bg: #f0f0f0;          /* 页面背景 */
-  --card: #fff;            /* 卡片背景 */
-  --card2: #f5f5f5;        /* 次级卡片 */
-  --text: #333;            /* 主文字 */
-  --text2: #666;           /* 次级文字 */
-  --text3: #999;           /* 辅助文字 */
-  --border: #eee;          /* 边框 */
-  --accent: #07c160;       /* 强调色（微信绿） */
-  --max-w: 680px;          /* 最大宽度 */
-  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-}
+| 插件 | 用途 | 必要性 |
+|------|------|--------|
+| **Links** | 友情链接管理 | 必须——友情链接页面依赖 |
+| **CommentNotifier** | 评论邮件通知 | 必须——评论后自动发邮件通知博主 & 访客 |
+| **ArticlePoster** | 文章海报分享 | 必须——海报分享功能依赖 |
 
-.darkmode {
-  --bg: #1a1a1a;
-  --card: #242424;
-  --card2: #2a2a2a;
-  --text: #e5e5e5;
-  --text2: #aaa;
-  --text3: #777;
-  --border: #333;
-}
-```
+> 以上三个插件请务必在 Typecho 后台启用，否则对应功能无法使用。[插件下载](https://kx.ms/archives/pyq.html)
 
 ---
 
-## 八、数据库交互
+## 🌐 兼容性
 
-### 8.1 表结构
-
-- `typecho_contents`：文章内容
-- `typecho_fields`：自定义字段（`name` + `str_value` + `cid`）
-- `typecho_comments`：评论
-- `typecho_users`：用户
-- `typecho_options`：设置项
-
-### 8.2 关键查询
-
-```sql
--- 获取自定义字段
-SELECT name, str_value FROM typecho_fields WHERE cid = ?
-
--- 获取评论（带用户信息）
-SELECT c.*, u.screenName FROM typecho_comments c 
-LEFT JOIN typecho_users u ON c.authorId = u.uid 
-WHERE c.cid = ? ORDER BY c.created ASC
-
--- 文章作者查询（修复 ownerId=0 问题）
-SELECT authorId FROM typecho_contents WHERE cid = ?
-```
+- **浏览器**：Chrome 80+ / Edge 80+ / Firefox 80+ / Safari 14+
+- **PHP**：7.4+（图片代理需要 GD 库）
+- **Typecho**：1.2+
 
 ---
 
-## 九、插件依赖
+## 📦 安装
 
-| 插件 | 状态 | 用途 |
-|------|------|------|
-| CommentNotifier | ✅ 已激活 | 评论邮件通知 |
-| Links | ✅ 已激活 | 友链管理 |
-| ArticlePoster | ⚠️ 状态未知 | 文章海报生成 |
-
----
-
-## 十、备份清单
-
-| 备份名 | 时间 | 说明 |
-|--------|------|------|
-| pyq_backup_20260627_210104 | 06-27 21:01 | 最初完整备份 |
-| pyq_backup_20260628_123511 | 06-28 12:35 | Tab式设置界面完成后 |
-| pyq_backup_20260628_141400 | 06-28 14:14 | LRC功能尝试前 |
-| pyq_backup_20260628_153600 | 06-28 15:36 | LRC回滚后 |
-| pyq_backup_20260628_163947 | 06-28 16:39 | 代码清理后 |
-| pyq_backup_20260628_173800 | 06-28 17:38 | 移动端优化后 |
-| pyq_backup_20260628_181600 | 06-28 18:16 | LRC首轮修复后 |
-| pyq_backup_20260628_184200 | 06-28 18:42 | LRC二轮修复后 |
-| pyq_backup_20260628_185100 | 06-28 18:51 | 进度条前 |
-| pyq_backup_20260628_190200 | 06-28 19:02 | 最新 |
+1. 将 `kxpyq` 文件夹上传到 Typecho 的 `/usr/themes/` 目录
+2. 后台 → 外观 → 启用「开心朋友圈」
+3. 进入「设置外观」进行个性化配置
+4. 安装并启用必备插件：Links / CommentNotifier / ArticlePoster
+5. 在「撰写」中新建文章，选择「说说」分类（默认 slug: `shuoshuo`），填写自定义字段即可
 
 ---
 
-## 十一、踩坑记录（关键教训）
+## 📸 截图
 
-1. **Typecho `.row` 默认 `width: 100vw`** — 导致编辑器容器溢出，需覆盖为 `width: 100%`
-2. **Typecho `setAttribute()` 设在 `<li>` 上** — 需用 `$e->input->setAttribute()` 设在 `<input>` 上
-3. **IIFE 闭合位置错误** — `})();` 必须在所有 `pyq.xxx` 定义之后
-4. **`display:none` 的父容器** — 子元素的 `display:flex` 无效，必须同时检查父容器
-5. **PJAX 内联 script 不执行** — `innerHTML` 注入的 `<script>` 不会执行，函数必须放外部 JS
-6. **`height:0;overflow:hidden` 的容器** — 内部元素永远不可交互，按钮必须放外面
-7. **CSS 变量不能用于伪元素 `background-image`** — 跨浏览器不兼容，用真实 DOM 更可靠
-8. **`scrollIntoView` 带动页面滚动** — 容器高度动画时使用 `scrollTo` 代替
-9. **单引号里 `\n` 是字面量** — 不是换行，需用双引号
-10. **Typecho 插件钩子系统** — 命名空间必须是 `TypechoPlugin\PluginName\ClassName`，手动 SQL 激活不会运行构造函数
+`/usr/themes/kxpyq/screenshot.png`
 
 ---
 
-## 十二、性能优化
+## 📝 许可
 
-- 图片懒加载（IntersectionObserver）
-- PJAX 无刷新（减少整页重载）
-- CSS `will-change` 用于动画元素
-- `requestAnimationFrame` 用于高频更新（歌词同步、进度条）
-- 音乐代理流式传输（不缓存完整文件）
-- Prism.js 按需加载（仅代码块页面）
+本主题为开源免费主题，可自由使用、修改。
 
 ---
 
-_文档生成时间：2026-06-28 19:02_  
-_主题总代码量：5266 行_  
-_备份总数：10 个_
+> 🍺 从朋友圈来，到朋友圈去。愿你的碎碎念，有处安放。
+> —— 清酒 @ [qu.pw](https://qu.pw)
